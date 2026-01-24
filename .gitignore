@@ -1,0 +1,18 @@
+# Python venv files
+Include/
+Lib/
+pyvenv.cfg
+
+# Ignore Scripts contents but keep the project folder
+Scripts/*
+!Scripts/MyNewsWebsite/
+
+# Python cache and database
+__pycache__/
+*.pyc
+*.sqlite3
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
