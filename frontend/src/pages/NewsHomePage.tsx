@@ -5,7 +5,7 @@ import { BreakingNews } from '../components/BreakingNews'
 import { ArticleCard, Article } from '../components/ArticleCard'
 import { CategoryTabs } from '../components/CategoryTabs'
 import { NewsletterSignup } from '../components/NewsletterSignup'
-import { Menu, Search, User } from 'lucide-react'
+import { Menu, Search, User, X } from 'lucide-react'
 
 // Mock Data (Fallback)
 const BREAKING_HEADLINES = [
@@ -31,7 +31,7 @@ const FEATURED_ARTICLES_FALLBACK: Article[] = [
     readTime: '8 min read',
     url: '#',
   },
-   /* Lines 29-57 omitted */
+  /* Lines 29-57 omitted */
   {
     id: '5',
     title: 'Minimalism: A Design Philosophy',
@@ -59,7 +59,7 @@ const LATEST_NEWS_FALLBACK: Article[] = [
     readTime: '6 min read',
     url: '#',
   },
-   /* Lines 80-117 omitted */
+  /* Lines 80-117 omitted */
   {
     id: '11',
     title: 'The Future of Remote Work',
@@ -89,6 +89,11 @@ export function NewsHomePage() {
   const [breakingHeadlines, setBreakingHeadlines] = useState<string[]>(BREAKING_HEADLINES)
   const [isLoading, setIsLoading] = useState(true)
 
+  // UI States
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+
   // Refs for scrolling
   const topStoriesRef = React.useRef<HTMLDivElement>(null)
   const latestNewsRef = React.useRef<HTMLDivElement>(null)
@@ -106,39 +111,39 @@ export function NewsHomePage() {
       if (page === 1) setIsLoading(true)
       const apiKey = process.env.REACT_APP_CURRENT_NEWS_API_KEY
       if (!apiKey) {
-          setIsLoading(false)
-          return
+        setIsLoading(false)
+        return
       }
 
       const response = await fetch(
-            `https://api.currentsapi.services/v1/search?apiKey=${apiKey}&language=en&page_number=${page}`
+        `https://api.currentsapi.services/v1/search?apiKey=${apiKey}&language=en&page_number=${page}${activeCategory !== 'All' ? `&category=${activeCategory}` : ''}${searchQuery ? `&keywords=${searchQuery}` : ''}`
       )
       const data = await response.json()
 
       if (data.status === 'ok' && data.news) {
-          const articles: Article[] = data.news.map((item: any) => ({
-            id: item.id,
-            title: item.title,
-            excerpt: item.description,
-            category: item.category[0] || 'General',
-            author: item.author || 'Unknown',
-            date: new Date(item.published).toLocaleDateString(),
-            imageUrl: item.image && item.image !== 'None' ? item.image : 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=2070&auto=format&fit=crop',
-            readTime: `${Math.ceil((item.description?.length || 0) / 200)} min read`,
-            url: item.url,
-          }))
+        const articles: Article[] = data.news.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          excerpt: item.description,
+          category: item.category[0] || 'General',
+          author: item.author || 'Unknown',
+          date: new Date(item.published).toLocaleDateString(),
+          imageUrl: item.image && item.image !== 'None' ? item.image : 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=2070&auto=format&fit=crop',
+          readTime: `${Math.ceil((item.description?.length || 0) / 200)} min read`,
+          url: item.url,
+        }))
 
-          if (articles.length > 0) {
-            if (page === 1) {
-              setFeaturedArticles(articles.slice(0, 5))
-              const remaining = articles.slice(5)
-              setAllLatestNews(remaining)
-              setFilteredNews(remaining)
-              setBreakingHeadlines(articles.slice(0, 5).map(a => a.title))
-            } else {
-              setAllLatestNews(prev => [...prev, ...articles])
-            }
+        if (articles.length > 0) {
+          if (page === 1) {
+            setFeaturedArticles(articles.slice(0, 5))
+            const remaining = articles.slice(5)
+            setAllLatestNews(remaining)
+            setFilteredNews(remaining)
+            setBreakingHeadlines(articles.slice(0, 5).map(a => a.title))
+          } else {
+            setAllLatestNews(prev => [...prev, ...articles])
           }
+        }
       }
     } catch (error) {
       console.error('Error fetching news:', error)
@@ -150,18 +155,14 @@ export function NewsHomePage() {
   useEffect(() => {
     fetchNews(1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [activeCategory]) // Re-fetch when category changes
 
-  /* Original useEffect for activeCategory filtering logic */
-  useEffect(() => {
-    if (activeCategory === 'All') {
-      setFilteredNews(allLatestNews)
-    } else {
-      setFilteredNews(
-        allLatestNews.filter((article) => article.category.toLowerCase().includes(activeCategory.toLowerCase())),
-      )
-    }
-  }, [activeCategory, allLatestNews])
+  const handleSearch = () => {
+    setIsSearchOpen(false)
+    fetchNews(1)
+  }
+
+  /* Deleted client-side filtering execution block as we now use API filtering */
 
   const handleLoadMore = () => {
     const nextPage = currentPage + 1
@@ -188,17 +189,21 @@ export function NewsHomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center gap-4">
-              <button 
+              <button
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                onClick={() => alert("Menu functionality coming soon!")}
+                onClick={() => setIsMenuOpen(true)}
               >
                 <Menu className="w-6 h-6" />
               </button>
-              <button 
-                onClick={() => alert("Search functionality coming soon!")}
+              <button
+                onClick={() => setIsSearchOpen(!isSearchOpen)}
                 className="focus:outline-none"
               >
-                <Search className="w-5 h-5 text-gray-500 cursor-pointer hover:text-editorial-black transition-colors" />
+                {isSearchOpen ? (
+                  <X className="w-5 h-5 text-gray-500 cursor-pointer hover:text-editorial-black transition-colors" />
+                ) : (
+                  <Search className="w-5 h-5 text-gray-500 cursor-pointer hover:text-editorial-black transition-colors" />
+                )}
               </button>
             </div>
 
@@ -207,22 +212,75 @@ export function NewsHomePage() {
             </div>
 
             <div className="flex items-center gap-4">
-              <button 
+              <button
                 className="hidden md:block font-mono text-sm font-bold uppercase tracking-wider hover:text-editorial-red transition-colors"
                 onClick={() => scrollToSection(newsletterRef)}
               >
                 Subscribe
               </button>
-              <button 
-                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                 onClick={() => alert("User profile coming soon!")}
+              <button
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                onClick={() => alert("User profile coming soon!")}
               >
                 <User className="w-6 h-6" />
               </button>
             </div>
           </div>
         </div>
-      </nav>
+
+
+        {/* Search Overlay */}
+        {
+          isSearchOpen && (
+            <div className="absolute top-20 left-0 w-full bg-white p-4 shadow-md z-30 animate-in slide-in-from-top-2">
+              <div className="max-w-3xl mx-auto flex gap-2">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  className="flex-1 p-2 border border-gray-300 font-sans focus:outline-none focus:border-editorial-red"
+                  placeholder="Search news..."
+                  autoFocus
+                />
+                <button
+                  onClick={handleSearch}
+                  className="bg-editorial-black text-white px-6 py-2 font-mono uppercase font-bold hover:bg-editorial-red transition-colors"
+                >
+                  Search
+                </button>
+              </div>
+            </div>
+          )
+        }
+
+        {/* Mobile Menu Overlay */}
+        {
+          isMenuOpen && (
+            <div className="fixed inset-0 bg-editorial-white z-50 p-8 flex flex-col">
+              <div className="flex justify-end mb-8">
+                <button onClick={() => setIsMenuOpen(false)} className="p-2">
+                  <X className="w-8 h-8" />
+                </button>
+              </div>
+              <nav className="flex flex-col gap-6 text-center">
+                {CATEGORIES.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => {
+                      setActiveCategory(cat)
+                      setIsMenuOpen(false)
+                    }}
+                    className={`text-2xl font-serif font-bold ${activeCategory === cat ? 'text-editorial-red' : 'text-editorial-black'}`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          )
+        }
+      </nav >
 
       <main className="pt-20">
         <Hero onReadMore={() => scrollToSection(topStoriesRef)} />
@@ -260,9 +318,9 @@ export function NewsHomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
             {/* Main Feature - Spans 7 cols */}
             <div className="lg:col-span-7">
-               {featuredArticles[0] && (
-                  <ArticleCard article={featuredArticles[0]} variant="large" />
-               )}
+              {featuredArticles[0] && (
+                <ArticleCard article={featuredArticles[0]} variant="large" />
+              )}
             </div>
 
             {/* Side Grid - Spans 5 cols */}
@@ -303,7 +361,7 @@ export function NewsHomePage() {
             </motion.div>
 
             <div className="mt-16 text-center">
-              <button 
+              <button
                 onClick={handleLoadMore}
                 disabled={isLoading}
                 className="px-8 py-3 border-2 border-editorial-black font-mono font-bold uppercase tracking-wider hover:bg-editorial-black hover:text-white transition-colors duration-300 disabled:opacity-50"
@@ -313,9 +371,9 @@ export function NewsHomePage() {
             </div>
           </div>
         </section>
-        
+
         <div ref={newsletterRef}>
-            <NewsletterSignup />
+          <NewsletterSignup />
         </div>
       </main>
 
@@ -387,6 +445,6 @@ export function NewsHomePage() {
           </div>
         </div>
       </footer>
-    </div>
+    </div >
   )
 }
