@@ -2,6 +2,13 @@
 # Exit on error
 set -o errexit
 
+# Build Frontend
+echo "Building Frontend..."
+cd ../../frontend
+npm install
+npm run build
+cd ../Scripts/MyNewsWebsite
+
 # Install dependencies
 pip install -r requirements.txt
 
