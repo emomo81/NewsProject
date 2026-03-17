@@ -7,7 +7,6 @@ import { CategoryTabs } from '../components/CategoryTabs'
 import { NewsletterSignup } from '../components/NewsletterSignup'
 import { Menu, Search, User, X } from 'lucide-react'
 
-// Mock Data (Fallback)
 const BREAKING_HEADLINES = [
   'Global Markets Rally as Tech Stocks Hit Record Highs',
   'New Climate Accord Signed by 150 Nations in Historic Summit',
@@ -16,7 +15,6 @@ const BREAKING_HEADLINES = [
   'Artificial Intelligence Regulation Bill Passes Senate',
 ]
 
-// ... existing mock data kept as fallback ...
 const FEATURED_ARTICLES_FALLBACK: Article[] = [
   {
     id: '1',
@@ -31,7 +29,6 @@ const FEATURED_ARTICLES_FALLBACK: Article[] = [
     readTime: '8 min read',
     url: '#',
   },
-  /* Lines 29-57 omitted */
   {
     id: '5',
     title: 'Minimalism: A Design Philosophy',
@@ -45,6 +42,7 @@ const FEATURED_ARTICLES_FALLBACK: Article[] = [
     url: '#',
   },
 ]
+
 const LATEST_NEWS_FALLBACK: Article[] = [
   {
     id: '6',
@@ -59,7 +57,6 @@ const LATEST_NEWS_FALLBACK: Article[] = [
     readTime: '6 min read',
     url: '#',
   },
-  /* Lines 80-117 omitted */
   {
     id: '11',
     title: 'The Future of Remote Work',
@@ -83,18 +80,17 @@ export function NewsHomePage() {
     damping: 30,
     restDelta: 0.001,
   })
+
   const [activeCategory, setActiveCategory] = useState('All')
   const [filteredNews, setFilteredNews] = useState<Article[]>(LATEST_NEWS_FALLBACK)
   const [featuredArticles, setFeaturedArticles] = useState<Article[]>(FEATURED_ARTICLES_FALLBACK)
   const [breakingHeadlines, setBreakingHeadlines] = useState<string[]>(BREAKING_HEADLINES)
   const [isLoading, setIsLoading] = useState(true)
-
-  // UI States
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
 
-  // Refs for scrolling
   const topStoriesRef = React.useRef<HTMLDivElement>(null)
   const latestNewsRef = React.useRef<HTMLDivElement>(null)
   const newsletterRef = React.useRef<HTMLDivElement>(null)
@@ -102,9 +98,6 @@ export function NewsHomePage() {
   const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
     ref.current?.scrollIntoView({ behavior: 'smooth' })
   }
-
-  const [currentPage, setCurrentPage] = useState(1)
-  const [_allLatestNews, setAllLatestNews] = useState<Article[]>(LATEST_NEWS_FALLBACK)
 
   const fetchNews = async (page = 1) => {
     try {
@@ -128,7 +121,10 @@ export function NewsHomePage() {
           category: item.category[0] || 'General',
           author: item.author || 'Unknown',
           date: new Date(item.published).toLocaleDateString(),
-          imageUrl: item.image && item.image !== 'None' ? item.image : 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=2070&auto=format&fit=crop',
+          imageUrl:
+            item.image && item.image !== 'None'
+              ? item.image
+              : 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=2070&auto=format&fit=crop',
           readTime: `${Math.ceil((item.description?.length || 0) / 200)} min read`,
           url: item.url,
         }))
@@ -137,11 +133,10 @@ export function NewsHomePage() {
           if (page === 1) {
             setFeaturedArticles(articles.slice(0, 5))
             const remaining = articles.slice(5)
-            setAllLatestNews(remaining)
             setFilteredNews(remaining)
-            setBreakingHeadlines(articles.slice(0, 5).map(a => a.title))
+            setBreakingHeadlines(articles.slice(0, 5).map((a) => a.title))
           } else {
-            setAllLatestNews(prev => [...prev, ...articles])
+            setFilteredNews((prev) => [...prev, ...articles])
           }
         }
       }
@@ -155,14 +150,12 @@ export function NewsHomePage() {
   useEffect(() => {
     fetchNews(1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeCategory]) // Re-fetch when category changes
+  }, [activeCategory])
 
   const handleSearch = () => {
     setIsSearchOpen(false)
     fetchNews(1)
   }
-
-  /* Deleted client-side filtering execution block as we now use API filtering */
 
   const handleLoadMore = () => {
     const nextPage = currentPage + 1
@@ -170,18 +163,12 @@ export function NewsHomePage() {
     fetchNews(nextPage)
   }
 
-
-
-
-
   return (
     <div className="min-h-screen bg-editorial-white text-editorial-black selection:bg-editorial-red selection:text-white">
       {/* Reading Progress Bar */}
       <motion.div
         className="fixed top-0 left-0 right-0 h-1 bg-editorial-red origin-left z-50"
-        style={{
-          scaleX,
-        }}
+        style={{ scaleX }}
       />
 
       {/* Navigation */}
@@ -207,7 +194,10 @@ export function NewsHomePage() {
               </button>
             </div>
 
-            <div className="text-3xl font-serif font-black tracking-tighter text-center absolute left-1/2 transform -translate-x-1/2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            <div
+              className="text-3xl font-serif font-black tracking-tighter text-center absolute left-1/2 transform -translate-x-1/2 cursor-pointer"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            >
               Emmanuel News<span className="text-editorial-red">.</span>
             </div>
 
@@ -220,7 +210,7 @@ export function NewsHomePage() {
               </button>
               <button
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                onClick={() => alert("User profile coming soon!")}
+                onClick={() => alert('User profile coming soon!')}
               >
                 <User className="w-6 h-6" />
               </button>
@@ -228,84 +218,71 @@ export function NewsHomePage() {
           </div>
         </div>
 
-
         {/* Search Overlay */}
-        {
-          isSearchOpen && (
-            <div className="absolute top-20 left-0 w-full bg-white p-4 shadow-md z-30 animate-in slide-in-from-top-2">
-              <div className="max-w-3xl mx-auto flex gap-2">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  className="flex-1 p-2 border border-gray-300 font-sans focus:outline-none focus:border-editorial-red"
-                  placeholder="Search news..."
-                  autoFocus
-                />
-                <button
-                  onClick={handleSearch}
-                  className="bg-editorial-black text-white px-6 py-2 font-mono uppercase font-bold hover:bg-editorial-red transition-colors"
-                >
-                  Search
-                </button>
-              </div>
+        {isSearchOpen && (
+          <div className="absolute top-20 left-0 w-full bg-white p-4 shadow-md z-30">
+            <div className="max-w-3xl mx-auto flex gap-2">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="flex-1 p-2 border border-gray-300 font-sans focus:outline-none focus:border-editorial-red"
+                placeholder="Search news..."
+                autoFocus
+              />
+              <button
+                onClick={handleSearch}
+                className="bg-editorial-black text-white px-6 py-2 font-mono uppercase font-bold hover:bg-editorial-red transition-colors"
+              >
+                Search
+              </button>
             </div>
-          )
-        }
+          </div>
+        )}
 
         {/* Mobile Menu Overlay */}
-        {
-          isMenuOpen && (
-            <div className="fixed inset-0 bg-editorial-white z-50 p-8 flex flex-col">
-              <div className="flex justify-end mb-8">
-                <button onClick={() => setIsMenuOpen(false)} className="p-2">
-                  <X className="w-8 h-8" />
-                </button>
-              </div>
-              <nav className="flex flex-col gap-6 text-center">
-                {CATEGORIES.map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => {
-                      setActiveCategory(cat)
-                      setIsMenuOpen(false)
-                    }}
-                    className={`text-2xl font-serif font-bold ${activeCategory === cat ? 'text-editorial-red' : 'text-editorial-black'}`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </nav>
+        {isMenuOpen && (
+          <div className="fixed inset-0 bg-editorial-white z-50 p-8 flex flex-col">
+            <div className="flex justify-end mb-8">
+              <button onClick={() => setIsMenuOpen(false)} className="p-2">
+                <X className="w-8 h-8" />
+              </button>
             </div>
-          )
-        }
-      </nav >
+            <nav className="flex flex-col gap-6 text-center">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => {
+                    setActiveCategory(cat)
+                    setIsMenuOpen(false)
+                  }}
+                  className={`text-2xl font-serif font-bold ${
+                    activeCategory === cat ? 'text-editorial-red' : 'text-editorial-black'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </nav>
+          </div>
+        )}
+      </nav>
 
       <main className="pt-20">
         <Hero onReadMore={() => scrollToSection(topStoriesRef)} />
 
         <BreakingNews headlines={breakingHeadlines} />
 
-        {/* Top Stories Section - Asymmetric Grid */}
+        {/* Top Stories */}
         <section ref={topStoriesRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <motion.div
-            initial={{
-              opacity: 0,
-              y: 20,
-            }}
-            whileInView={{
-              opacity: 1,
-              y: 0,
-            }}
-            viewport={{
-              once: true,
-            }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
             className="flex items-end justify-between mb-12 border-b border-black pb-4"
           >
-            <h2 className="text-4xl md:text-5xl font-serif font-bold">
-              Top Stories
-            </h2>
+            <h2 className="text-4xl md:text-5xl font-serif font-bold">Top Stories</h2>
             <span className="font-mono text-sm text-gray-500 uppercase tracking-wider hidden sm:block">
               {new Date().toLocaleDateString('en-US', {
                 weekday: 'long',
@@ -316,34 +293,24 @@ export function NewsHomePage() {
           </motion.div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-            {/* Main Feature - Spans 7 cols */}
             <div className="lg:col-span-7">
               {featuredArticles[0] && (
                 <ArticleCard article={featuredArticles[0]} variant="large" />
               )}
             </div>
-
-            {/* Side Grid - Spans 5 cols */}
             <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-8">
               {featuredArticles.slice(1).map((article, index) => (
-                <ArticleCard
-                  key={article.id}
-                  article={article}
-                  index={index}
-                  variant="compact"
-                />
+                <ArticleCard key={article.id} article={article} index={index} variant="compact" />
               ))}
             </div>
           </div>
         </section>
 
-        {/* Latest News Section */}
+        {/* Latest News */}
         <section ref={latestNewsRef} className="bg-editorial-gray py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="mb-10">
-              <h2 className="text-3xl font-serif font-bold mb-8">
-                Latest News
-              </h2>
+              <h2 className="text-3xl font-serif font-bold mb-8">Latest News</h2>
               <CategoryTabs
                 categories={CATEGORIES}
                 activeCategory={activeCategory}
@@ -351,10 +318,7 @@ export function NewsHomePage() {
               />
             </div>
 
-            <motion.div
-              layout
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-            >
+            <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredNews.map((article, index) => (
                 <ArticleCard key={article.id} article={article} index={index} />
               ))}
@@ -383,8 +347,8 @@ export function NewsHomePage() {
             <div className="col-span-1 md:col-span-2">
               <h3 className="text-3xl font-serif font-bold mb-6">Emmanuel News.</h3>
               <p className="text-gray-400 max-w-md font-sans">
-                Delivering the most important stories from around the globe with
-                depth, context, and perspective.
+                Delivering the most important stories from around the globe with depth, context, and
+                perspective.
               </p>
             </div>
             <div>
@@ -392,14 +356,7 @@ export function NewsHomePage() {
                 Sections
               </h4>
               <ul className="space-y-3 text-gray-400 font-sans">
-                {[
-                  'World',
-                  'Politics',
-                  'Business',
-                  'Tech',
-                  'Science',
-                  'Health',
-                ].map((item) => (
+                {['World', 'Politics', 'Business', 'Tech', 'Science', 'Health'].map((item) => (
                   <li key={item}>
                     <a href="/" className="hover:text-white transition-colors">
                       {item}
@@ -413,38 +370,28 @@ export function NewsHomePage() {
                 Company
               </h4>
               <ul className="space-y-3 text-gray-400 font-sans">
-                {[
-                  'About Us',
-                  'Careers',
-                  'Code of Ethics',
-                  'Privacy Policy',
-                  'Contact',
-                ].map((item) => (
-                  <li key={item}>
-                    <a href="/" className="hover:text-white transition-colors">
-                      {item}
-                    </a>
-                  </li>
-                ))}
+                {['About Us', 'Careers', 'Code of Ethics', 'Privacy Policy', 'Contact'].map(
+                  (item) => (
+                    <li key={item}>
+                      <a href="/" className="hover:text-white transition-colors">
+                        {item}
+                      </a>
+                    </li>
+                  )
+                )}
               </ul>
             </div>
           </div>
           <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-gray-500 font-mono">
-            <p>&copy; 2024 Emmanuel News News Media. All rights reserved.</p>
+            <p>&copy; 2024 Emmanuel News Media. All rights reserved.</p>
             <div className="flex gap-6 mt-4 md:mt-0">
-              <a href="/" className="hover:text-white transition-colors">
-                Twitter
-              </a>
-              <a href="/" className="hover:text-white transition-colors">
-                LinkedIn
-              </a>
-              <a href="/" className="hover:text-white transition-colors">
-                Instagram
-              </a>
+              <a href="/" className="hover:text-white transition-colors">Twitter</a>
+              <a href="/" className="hover:text-white transition-colors">LinkedIn</a>
+              <a href="/" className="hover:text-white transition-colors">Instagram</a>
             </div>
           </div>
         </div>
       </footer>
-    </div >
+    </div>
   )
 }
