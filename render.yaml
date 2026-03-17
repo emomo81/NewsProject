@@ -3,8 +3,8 @@ services:
     name: my-news-website
     env: python
     region: oregon
-    buildCommand: "./build.sh"
-    startCommand: "gunicorn MyNewsWebsite.wsgi:application"
+    buildCommand: "./Scripts/MyNewsWebsite/build.sh"
+    startCommand: "cd Scripts/MyNewsWebsite && python manage.py migrate && python create_superuser.py && gunicorn MyNewsWebsite.wsgi:application"
     plan: free
     branch: main
     rootDir: Scripts/MyNewsWebsite
@@ -14,7 +14,7 @@ services:
       - key: NODE_VERSION
         value: 18.17.1
       - key: REACT_APP_CURRENT_NEWS_API_KEY
-        value: jey-eECw1-1_3nJZJbbT0YRdVyUGiaDhymLn2VUopu-clDHR
+        sync: false
       - key: DATABASE_URL
         fromDatabase:
           name: my-news-db
