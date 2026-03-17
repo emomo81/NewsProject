@@ -121,11 +121,18 @@ export function NewsHomePage() {
           category: item.category[0] || 'General',
           author: item.author || 'Unknown',
           date: new Date(item.published).toLocaleDateString(),
-          imageUrl:
-            item.image && item.image !== 'None'
-              ? item.image
-              : 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=2070&auto=format&fit=crop',
-          readTime: `${Math.ceil((item.description?.length || 0) / 200)} min read`,
+imageUrl: (() => {
+  if (item.image && item.image !== 'None') return item.image
+  const fallbacks = [
+    'https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1495020689067-958852a7765e?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1478720568477-152d9b164e26?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1557992260-ec58e38d363c?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1551817958-20204d6ab212?q=80&w=800&auto=format&fit=crop',
+  ]
+  return fallbacks[Math.floor(Math.random() * fallbacks.length)]
+})(),          readTime: `${Math.ceil((item.description?.length || 0) / 200)} min read`,
           url: item.url,
         }))
 
