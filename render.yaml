@@ -4,7 +4,7 @@ services:
     env: python
     region: oregon
     buildCommand: "./Scripts/MyNewsWebsite/build.sh"
-    startCommand: "cd Scripts/MyNewsWebsite && python manage.py migrate && python create_superuser.py && gunicorn MyNewsWebsite.wsgi:application"
+    startCommand: "python manage.py migrate && python create_superuser.py && gunicorn MyNewsWebsite.wsgi:application"
     plan: free
     branch: main
     rootDir: Scripts/MyNewsWebsite
