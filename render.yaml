@@ -3,7 +3,7 @@ services:
     name: my-news-website
     env: python
     region: oregon
-    buildCommand: "Scripts/MyNewsWebsite/build.sh"
+    buildCommand: "NewsProject/Scripts/MyNewsWebsite/build.sh"
     startCommand: "python manage.py migrate && python create_superuser.py && gunicorn MyNewsWebsite.wsgi:application"
     plan: free
     branch: main
