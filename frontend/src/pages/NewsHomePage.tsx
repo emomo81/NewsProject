@@ -104,7 +104,7 @@ export function NewsHomePage() {
   }
 
   const [currentPage, setCurrentPage] = useState(1)
-  const [allLatestNews, setAllLatestNews] = useState<Article[]>(LATEST_NEWS_FALLBACK)
+  const [_allLatestNews, setAllLatestNews] = useState<Article[]>(LATEST_NEWS_FALLBACK)
 
   const fetchNews = async (page = 1) => {
     try {
