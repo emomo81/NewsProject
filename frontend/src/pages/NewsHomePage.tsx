@@ -5,7 +5,11 @@ import { BreakingNews } from '../components/BreakingNews'
 import { ArticleCard, Article } from '../components/ArticleCard'
 import { CategoryTabs } from '../components/CategoryTabs'
 import { NewsletterSignup } from '../components/NewsletterSignup'
-import { Menu, Search, User, X } from 'lucide-react'
+import { Menu, Search, User, X, AlertCircle } from 'lucide-react'
+
+// Django API base URL - empty string means same origin (when served by Django)
+// In development, point to Django dev server
+const API_BASE_URL = process.env.REACT_APP_API_URL || ''
 
 const BREAKING_HEADLINES = [
   'Global Markets Rally as Tech Stocks Hit Record Highs',
@@ -15,7 +19,7 @@ const BREAKING_HEADLINES = [
   'Artificial Intelligence Regulation Bill Passes Senate',
 ]
 
-const FEATURED_ARTICLES_FALLBACK: Article[] = [
+const FALLBACK_ARTICLES: Article[] = [
   {
     id: '1',
     title: 'The Architecture of Tomorrow: Sustainable Cities',
@@ -30,22 +34,19 @@ const FEATURED_ARTICLES_FALLBACK: Article[] = [
     url: '#',
   },
   {
-    id: '5',
-    title: 'Minimalism: A Design Philosophy',
-    excerpt: 'Less is more, but better.',
-    category: 'Style',
-    author: 'Anna Wintour',
-    date: 'Oct 20, 2023',
+    id: '2',
+    title: 'The Future of Remote Work',
+    excerpt: 'Hybrid models are settling into permanence across industries worldwide.',
+    category: 'Work',
+    author: 'Lisa Boss',
+    date: 'Oct 19, 2023',
     imageUrl:
-      'https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?q=80&w=2070&auto=format&fit=crop',
-    readTime: '3 min read',
+      'https://images.unsplash.com/photo-1593642632823-8f78536788c6?q=80&w=2070&auto=format&fit=crop',
+    readTime: '4 min read',
     url: '#',
   },
-]
-
-const LATEST_NEWS_FALLBACK: Article[] = [
   {
-    id: '6',
+    id: '3',
     title: 'Electric Aviation Takes Flight',
     excerpt:
       'The first commercial electric flight routes are opening this year, promising a greener future for regional travel.',
@@ -55,18 +56,6 @@ const LATEST_NEWS_FALLBACK: Article[] = [
     imageUrl:
       'https://images.unsplash.com/photo-1559067515-bf7d799b23e2?q=80&w=2070&auto=format&fit=crop',
     readTime: '6 min read',
-    url: '#',
-  },
-  {
-    id: '11',
-    title: 'The Future of Remote Work',
-    excerpt: 'Hybrid models are settling into permanence.',
-    category: 'Work',
-    author: 'Lisa Boss',
-    date: 'Oct 19, 2023',
-    imageUrl:
-      'https://images.unsplash.com/photo-1593642632823-8f78536788c6?q=80&w=2070&auto=format&fit=crop',
-    readTime: '4 min read',
     url: '#',
   },
 ]
@@ -82,14 +71,18 @@ export function NewsHomePage() {
   })
 
   const [activeCategory, setActiveCategory] = useState('All')
-  const [filteredNews, setFilteredNews] = useState<Article[]>(LATEST_NEWS_FALLBACK)
-  const [featuredArticles, setFeaturedArticles] = useState<Article[]>(FEATURED_ARTICLES_FALLBACK)
+  const [featuredArticles, setFeaturedArticles] = useState<Article[]>(FALLBACK_ARTICLES)
+  const [latestNews, setLatestNews] = useState<Article[]>(FALLBACK_ARTICLES)
   const [breakingHeadlines, setBreakingHeadlines] = useState<string[]>(BREAKING_HEADLINES)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
 
   const topStoriesRef = React.useRef<HTMLDivElement>(null)
   const latestNewsRef = React.useRef<HTMLDivElement>(null)
@@ -99,79 +92,102 @@ export function NewsHomePage() {
     ref.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const fetchNews = async (page = 1) => {
+  const fetchNews = async (page = 1, category = activeCategory, keywords = '') => {
     try {
-      if (page === 1) setIsLoading(true)
-      const apiKey = process.env.REACT_APP_CURRENT_NEWS_API_KEY
-      if (!apiKey) {
-        setIsLoading(false)
+      if (page === 1) {
+        setIsLoading(true)
+        setError(null)
+      } else {
+        setIsLoadingMore(true)
+      }
+
+      const params = new URLSearchParams({
+        page: String(page),
+        ...(category !== 'All' && { category }),
+        ...(keywords && { keywords }),
+      })
+
+      const response = await fetch(`${API_BASE_URL}/api/news/?${params}`)
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.error) {
+        throw new Error(data.error)
+      }
+
+      const articles: Article[] = data.articles || []
+
+      if (articles.length === 0) {
+        setHasMore(false)
         return
       }
 
-      const response = await fetch(
-        `https://api.currentsapi.services/v1/search?apiKey=${apiKey}&language=en&page_number=${page}${activeCategory !== 'All' ? `&category=${activeCategory}` : ''}${searchQuery ? `&keywords=${searchQuery}` : ''}`
-      )
-      const data = await response.json()
-
-      if (data.status === 'ok' && data.news) {
-        const articles: Article[] = data.news.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          excerpt: item.description,
-          category: item.category[0] || 'General',
-          author: item.author || 'Unknown',
-          date: new Date(item.published).toLocaleDateString(),
-imageUrl: (() => {
-  if (item.image && item.image !== 'None') return item.image
-  const fallbacks = [
-    'https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1495020689067-958852a7765e?q=80&w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1478720568477-152d9b164e26?q=80&w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?q=80&w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1557992260-ec58e38d363c?q=80&w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1551817958-20204d6ab212?q=80&w=800&auto=format&fit=crop',
-  ]
-  // Use article id to always pick the same image for the same article
-  const index = item.id
-    .split('')
-    .reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0)
-  return fallbacks[index % fallbacks.length]
-})(),          readTime: `${Math.ceil((item.description?.length || 0) / 200)} min read`,
-          url: item.url,
-        }))
-
-        if (articles.length > 0) {
-          if (page === 1) {
-            setFeaturedArticles(articles.slice(0, 5))
-            const remaining = articles.slice(5)
-            setFilteredNews(remaining)
-            setBreakingHeadlines(articles.slice(0, 5).map((a) => a.title))
-          } else {
-            setFilteredNews((prev) => [...prev, ...articles])
-          }
-        }
+      if (page === 1) {
+        setFeaturedArticles(articles.slice(0, 5))
+        setLatestNews(articles.slice(5))
+        setBreakingHeadlines(articles.slice(0, 5).map((a) => a.title))
+        setCurrentPage(1)
+        setHasMore(true)
+      } else {
+        setLatestNews((prev) => [...prev, ...articles])
+        setHasMore(articles.length >= 10)
       }
-    } catch (error) {
-      console.error('Error fetching news:', error)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load news'
+      setError(message)
+      console.error('Error fetching news:', err)
     } finally {
       setIsLoading(false)
+      setIsLoadingMore(false)
+    }
+  }
+
+  // Fetch latest news for featured/breaking section on mount
+  const fetchLatest = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/latest/`)
+      if (!response.ok) return
+      const data = await response.json()
+      if (data.articles && data.articles.length > 0) {
+        setFeaturedArticles(data.articles.slice(0, 5))
+        setBreakingHeadlines(data.articles.slice(0, 5).map((a: Article) => a.title))
+      }
+    } catch (err) {
+      console.error('Error fetching latest news:', err)
     }
   }
 
   useEffect(() => {
+    fetchLatest()
     fetchNews(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    fetchNews(1, activeCategory)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCategory])
 
-  const handleSearch = () => {
+  const handleSearch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
     setIsSearchOpen(false)
-    fetchNews(1)
+    fetchNews(1, activeCategory, searchQuery)
   }
 
   const handleLoadMore = () => {
     const nextPage = currentPage + 1
     setCurrentPage(nextPage)
-    fetchNews(nextPage)
+    fetchNews(nextPage, activeCategory, searchQuery)
+  }
+
+  const handleCategoryChange = (category: string) => {
+    setActiveCategory(category)
+    setCurrentPage(1)
+    setHasMore(true)
   }
 
   return (
@@ -232,27 +248,26 @@ imageUrl: (() => {
         {/* Search Overlay */}
         {isSearchOpen && (
           <div className="absolute top-20 left-0 w-full bg-white p-4 shadow-md z-30">
-            <div className="max-w-3xl mx-auto flex gap-2">
+            <form onSubmit={handleSearch} className="max-w-3xl mx-auto flex gap-2">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 className="flex-1 p-2 border border-gray-300 font-sans focus:outline-none focus:border-editorial-red"
                 placeholder="Search news..."
                 autoFocus
               />
               <button
-                onClick={handleSearch}
+                type="submit"
                 className="bg-editorial-black text-white px-6 py-2 font-mono uppercase font-bold hover:bg-editorial-red transition-colors"
               >
                 Search
               </button>
-            </div>
+            </form>
           </div>
         )}
 
-        {/* Mobile Menu Overlay */}
+        {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="fixed inset-0 bg-editorial-white z-50 p-8 flex flex-col">
             <div className="flex justify-end mb-8">
@@ -265,7 +280,7 @@ imageUrl: (() => {
                 <button
                   key={cat}
                   onClick={() => {
-                    setActiveCategory(cat)
+                    handleCategoryChange(cat)
                     setIsMenuOpen(false)
                   }}
                   className={`text-2xl font-serif font-bold ${
@@ -285,6 +300,16 @@ imageUrl: (() => {
 
         <BreakingNews headlines={breakingHeadlines} />
 
+        {/* Error Banner */}
+        {error && (
+          <div className="bg-red-50 border-l-4 border-editorial-red px-6 py-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-editorial-red flex-shrink-0" />
+            <p className="text-red-800 font-sans text-sm">
+              {error} — showing cached stories instead.
+            </p>
+          </div>
+        )}
+
         {/* Top Stories */}
         <section ref={topStoriesRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <motion.div
@@ -303,18 +328,34 @@ imageUrl: (() => {
             </span>
           </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-            <div className="lg:col-span-7">
-              {featuredArticles[0] && (
-                <ArticleCard article={featuredArticles[0]} variant="large" />
-              )}
+          {isLoading ? (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-pulse">
+              <div className="lg:col-span-7 bg-gray-200 aspect-video rounded" />
+              <div className="lg:col-span-5 space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="bg-gray-200 h-24 rounded" />
+                ))}
+              </div>
             </div>
-            <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-8">
-              {featuredArticles.slice(1).map((article, index) => (
-                <ArticleCard key={article.id} article={article} index={index} variant="compact" />
-              ))}
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+              <div className="lg:col-span-7">
+                {featuredArticles[0] && (
+                  <ArticleCard article={featuredArticles[0]} variant="large" />
+                )}
+              </div>
+              <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-8">
+                {featuredArticles.slice(1).map((article, index) => (
+                  <ArticleCard
+                    key={article.id}
+                    article={article}
+                    index={index}
+                    variant="compact"
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </section>
 
         {/* Latest News */}
@@ -325,25 +366,38 @@ imageUrl: (() => {
               <CategoryTabs
                 categories={CATEGORIES}
                 activeCategory={activeCategory}
-                onCategoryChange={setActiveCategory}
+                onCategoryChange={handleCategoryChange}
               />
             </div>
 
-            <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredNews.map((article, index) => (
-                <ArticleCard key={article.id} article={article} index={index} />
-              ))}
-            </motion.div>
-
-            <div className="mt-16 text-center">
-              <button
-                onClick={handleLoadMore}
-                disabled={isLoading}
-                className="px-8 py-3 border-2 border-editorial-black font-mono font-bold uppercase tracking-wider hover:bg-editorial-black hover:text-white transition-colors duration-300 disabled:opacity-50"
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-pulse">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="bg-gray-200 h-64 rounded" />
+                ))}
+              </div>
+            ) : (
+              <motion.div
+                layout
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
               >
-                {isLoading ? 'Loading...' : 'Load More Stories'}
-              </button>
-            </div>
+                {latestNews.map((article, index) => (
+                  <ArticleCard key={article.id} article={article} index={index} />
+                ))}
+              </motion.div>
+            )}
+
+            {hasMore && (
+              <div className="mt-16 text-center">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                  className="px-8 py-3 border-2 border-editorial-black font-mono font-bold uppercase tracking-wider hover:bg-editorial-black hover:text-white transition-colors duration-300 disabled:opacity-50"
+                >
+                  {isLoadingMore ? 'Loading...' : 'Load More Stories'}
+                </button>
+              </div>
+            )}
           </div>
         </section>
 
@@ -358,8 +412,8 @@ imageUrl: (() => {
             <div className="col-span-1 md:col-span-2">
               <h3 className="text-3xl font-serif font-bold mb-6">Emmanuel News.</h3>
               <p className="text-gray-400 max-w-md font-sans">
-                Delivering the most important stories from around the globe with depth, context, and
-                perspective.
+                Delivering the most important stories from around the globe with depth, context,
+                and perspective.
               </p>
             </div>
             <div>
