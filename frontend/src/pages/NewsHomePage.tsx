@@ -131,7 +131,11 @@ imageUrl: (() => {
     'https://images.unsplash.com/photo-1557992260-ec58e38d363c?q=80&w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1551817958-20204d6ab212?q=80&w=800&auto=format&fit=crop',
   ]
-  return fallbacks[Math.floor(Math.random() * fallbacks.length)]
+  // Use article id to always pick the same image for the same article
+  const index = item.id
+    .split('')
+    .reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0)
+  return fallbacks[index % fallbacks.length]
 })(),          readTime: `${Math.ceil((item.description?.length || 0) / 200)} min read`,
           url: item.url,
         }))
